@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Large Data and Models
+models_cache/
+data_cache/
+results/
+
+# VS Code
+.vscode/
