@@ -1,20 +1,11 @@
 from datasets import load_dataset
-# from modelscope import MsDataset
 
-def load_conll_samples(split='validation', num_samples=5):
-    """
-    加载 CoNLL-2003 数据集的样本。
-    
-    参数:
-        split (str): 数据集划分 ('train', 'validation', 'test')。
-        num_samples (int): 要加载多少条样本。
-        
-    返回:
-        list: 包含 'id', 'tokens', 'ner_tags', 'text' 的字典列表。
-    """
-    print(f"Loading CoNLL-2003 dataset ({split} split)...")
+# 加载数据
+def load_data(split='validation', num_samples=5):
+    """加载测试数据"""
+    print(f"Loading dataset ({split} split)...")
     try:
-        # 尝试从 Hugging Face 加载数据集，trust_remote_code=True 是为了防止某些脚本报错
+        # 加载HF数据
         dataset = load_dataset("conll2003", split=split, trust_remote_code=True)
         
         samples = []
@@ -30,7 +21,7 @@ def load_conll_samples(split='validation', num_samples=5):
             })
         return samples
     except Exception as e:
-        print(f"Warning: Failed to load CoNLL-2003 dataset ({e}). Using dummy data.")
+        print(f"Warning: Failed to load dataset ({e}). Using dummy data.")
         return [
             {
                 'id': '0',

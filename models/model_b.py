@@ -1,13 +1,14 @@
 from .base import BaseModel
+from .prompts import get_model_b_critique_prompt
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class ModelB(BaseModel):
     def __init__(self, model_path: str):
         self.model_path = model_path
-        print(f"Loading Local Model B from {model_path}...")
+        print(f"[调试信息] 正在加载本地模型 B，路径：{model_path}...")
         
-        # 初始化本地模型和分词器，注意路径要对，显存不够的话去 config.py 换个小点的模型
+        # 加载模型
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModelForCausalLM.from_pretrained(
             model_path,
@@ -16,8 +17,8 @@ class ModelB(BaseModel):
         )
 
     def generate(self, prompt: str, **kwargs) -> str:
-        # Model B 的主要任务：基于提示词生成修正后的文本
-        print(f"Model B correcting...")
+        # 生成修正文本
+        print(f"[调试信息] 模型 B 正在生成...")
         
         messages = [
             {"role": "user", "content": prompt}
@@ -26,9 +27,7 @@ class ModelB(BaseModel):
         text = self.tokenizer.apply_chat_template(
             messages,
             tokenize=False,
-            add_generation_prompt=True,
-            # Qwen 系列模型不需要 enable_thinking 参数，如果是 DeepSeek R1 这类带思考过程的模型才需要开
-            # enable_thinking=True 
+            add_generation_prompt=True
         )
         
         model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
@@ -40,18 +39,19 @@ class ModelB(BaseModel):
         
         output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
         
-        # 解析输出内容。这段逻辑主要是为了兼容带思考过程的模型（比如 DeepSeek R1），
-        # 普通模型跑这段也没事，找不到标签就直接返回全部内容。
-        # 151668 是 </think> 的 token id，不同模型可能不一样，注意检查。
         try:
             index = len(output_ids) - output_ids[::-1].index(151668)
         except ValueError:
             index = 0
-
-        thinking_content = self.tokenizer.decode(output_ids[:index], skip_special_tokens=True).strip("\n")
-        content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True).strip("\n")
-        
+            
+        content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True).strip()
         return content
+
+    def critique(self, sent: str, prediction: str, previous_feedback: str = None) -> str:
+        print(f"[调试信息] 模型 B 正在进行批评...")
+        prompt = get_model_b_critique_prompt(sent, prediction, previous_feedback)
+        
+        return self.generate(prompt)
 
     def construct_correction_prompt(self, input_params: str, result_a: str, result_c: str) -> str:
         """
